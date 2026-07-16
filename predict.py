@@ -4,9 +4,9 @@ import joblib
 
 def evaluate_patient(input_data):
     """
-    input_data: dict containing age, gender, weight, height, temperature, symptoms (list)
+    Evaluates patient profile details and symptom selections with height in centimeters.
     """
-    # Load Models & Configuration
+    # Load serial models
     model = joblib.load('model/disease_model.pkl')
     scaler = joblib.load('model/scaler.pkl')
     symptom_cols = joblib.load('model/symptom_encoder.pkl')
@@ -14,19 +14,25 @@ def evaluate_patient(input_data):
     severity_df = pd.read_csv('dataset/severity.csv').set_index('symptom')
     weights = severity_df['weight'].to_dict()
     
-    # Module 11 — Emergency Detection
+    # Emergency Check (Critical Symptoms combination)
     symptoms_set = set(input_data['symptoms'])
     if 'chest_pain' in symptoms_set and 'breathing_difficulty' in symptoms_set:
-        return {"emergency": True, "message": "CRITICAL WARNING: Chest pain combined with breathing difficulty detected. Seek emergency medical care immediately!"}
+        return {
+            "emergency": True, 
+            "message": "EMERGENCY: Chest pain combined with breathing difficulties detected. Please seek emergency medical care immediately."
+        }
     
-    # Preprocessing & Vectorization (Module 2 & 4)
+    # Preprocess & Vectorize
     symptom_vector = {sym: (1 if sym in symptoms_set else 0) for sym in symptom_cols}
     
-    bmi = float(input_data['weight']) / (float(input_data['height']) ** 2)
+    # Calculate BMI converting height from cm to meters
+    height_m = float(input_data['height']) / 100
+    bmi = float(input_data['weight']) / (height_m ** 2)
+    
     symptom_count = sum(symptom_vector.values())
     severity_score = sum(symptom_vector[sym] * weights[sym] for sym in symptom_cols)
     
-    # Combine engineered array
+    # Feature Vector Construction
     base_features = [
         float(input_data['age']),
         bmi,
@@ -38,7 +44,7 @@ def evaluate_patient(input_data):
     final_features = [symptom_vector[sym] for sym in symptom_cols] + base_features
     final_features_scaled = scaler.transform([final_features])
     
-    # Module 6 — Confidence Score (Top-N Predictions)
+    # Confidence Classification (Top-3 Predictions)
     probabilities = model.predict_proba(final_features_scaled)[0]
     classes = model.classes_
     
@@ -46,7 +52,7 @@ def evaluate_patient(input_data):
     predictions = [{"disease": classes[i], "probability": round(probabilities[i] * 100, 2)} for i in top_indices]
     primary_disease = predictions[0]['disease']
     
-    # Module 7 — Risk Prediction scoring engine
+    # Risk Factor Calculations
     risk_score = 0
     if float(input_data['age']) >= 65: risk_score += 20
     if float(input_data['temperature']) > 39.0: risk_score += 25
@@ -60,16 +66,16 @@ def evaluate_patient(input_data):
     else:
         risk_level = "High"
         
-    # Module 8, 9, 10 — Metadata resolution
+    # Metadata Parsing
     doc_df = pd.read_csv('dataset/doctors.csv').set_index('disease')
     med_df = pd.read_csv('dataset/medications.csv').set_index('disease')
     prec_df = pd.read_csv('dataset/precautions.csv').set_index('disease')
     
     specialist = doc_df.loc[primary_disease, 'specialist'] if primary_disease in doc_df.index else "General Physician"
-    medicine = med_df.loc[primary_disease, 'medicine'] if primary_disease in med_df.index else "Consult a Doctor"
+    medicine = med_df.loc[primary_disease, 'medicine'] if primary_disease in med_df.index else "Consult Clinician"
     
     prec_row = prec_df.loc[primary_disease] if primary_disease in prec_df.index else None
-    precautions = [prec_row['precaution_1'], prec_row['precaution_2']] if prec_row is not None else ["Rest", "Consult specialist"]
+    precautions = [prec_row['precaution_1'], prec_row['precaution_2']] if prec_row is not None else ["Monitor status", "Drink fluids"]
     
     return {
         "emergency": False,
