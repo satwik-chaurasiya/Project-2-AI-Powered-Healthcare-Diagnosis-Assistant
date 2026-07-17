@@ -148,6 +148,10 @@ Open your favorite web browser and head over to: http://127.0.0.1:5000 🎉
 ## 🛡️ Privacy & Safety
 
 * **Completely Local:** Your health data never leaves your machine. The SQL database and the AI model run entirely on your local computer, meaning total privacy.
+
+<img width="1505" height="427" alt="image" src="https://github.com/user-attachments/assets/36b0ae94-5fac-4335-a689-38c234eeee25" />
+
+  
 * **Smart Overrides:** Life-threatening symptom combinations immediately jump to emergency screens, putting user safety above machine learning numbers.
 
 ---
